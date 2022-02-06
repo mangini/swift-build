@@ -29,6 +29,20 @@ jobs:
           name: windows-sdk-${{ matrix.arch }}
           path: ${{ github.workspace }}/BuildRoot/Library/Developer/Platforms/Windows.platform
 
+      - uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: swift-toolchain.yml
+          run_number: ${{ github.event.input.run_number }}
+          name: toolchain-${{ matrix.arch }}
+          path: ${{ github.workspace}}/BuildRoot/Library
+
+      - uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: swift-toolchain.yml
+          run_number: ${{ github.event.input.run_number }}
+          name: devtools-${{ matrix.arch }}
+          path: ${{ github.workspace }}/BuildRoot/Library
+
       - uses: actions/setup-python@v2
       - uses: jannekem/run-python-script-action@v1
         with:
@@ -69,6 +83,17 @@ jobs:
         run: msbuild -nologo -restore -p:PlatformToolset=v142 -p:Configuration=Release
         working-directory: ${{ github.workspace }}/SourceCache/swift-installer-scripts/platforms/Windows/CustomActions/SwiftInstaller
 
+      - name: Package Toolchain
+        run: |
+          msbuild -nologo `
+            -p:Configuration=Release `
+            -p:RunWixToolsOutOfProc=true `
+            -p:OutputPath=${{ github.workspace }}\BinaryCache\toolchain\ `
+            -p:IntermediateOutputPath=${{ github.workspace }}\BinaryCache\toolchain\ `
+            -p:TOOLCHAIN_ROOT=${{ github.workspace }}/BuildRoot/Library/Developer/Toolchains/unknown-Asserts-development.xctoolchain `
+            ${{ github.workspace }}/SourceCache/swift-installer-scripts/platforms/Windows/toolchain.wixproj
+          # codesign /f $(CERTIFICATE) /p $(PASSPHRASE) /tr http://timestamp.digicert.com /fd sha256 /td sha256 ${{ github.workspace }}/BinaryCache/toolchain/toolchain.msi
+
       - name: Package SDK
         run: |
           # TODO(compnerd) determine why PlatformToolset is set to v100 on GHA
@@ -97,6 +122,37 @@ jobs:
             ${{ github.workspace }}/SourceCache/swift-installer-scripts/platforms/Windows/runtime.wixproj
           # codesign /f $(CERTIFICATE) /p $(PASSPHRASE) /tr http://timestamp.digicert.com /fd sha256 /td sha256 ${{ github.workspace }}/BinaryCache/runtime/runtime.msi
 
+      - name: Package Developer Tools
+        run: |
+          msbuild -nologo `
+            -p:Configuration=Release `
+            -p:RunWixToolsOutOfProc=true `
+            -p:OutputPath=${{ github.workspace }}\BinaryCache\devtools\ `
+            -p:IntermediateOutputPath=${{ github.workspace }}\BinaryCache\devtools\ `
+            -p:DEVTOOLS_ROOT=${{ github.workspace }}/BuildRoot/Library/Developer/Toolchains/unknown-Asserts-development.xctoolchain `
+            ${{ github.workspace }}/SourceCache/swift-installer-scripts/platforms/windows/devtools.wixproj
+          # codesign /f $(CERTIFICATE) /p $(PASSPHRASE) /tr http://timestamp.digicert.com /fd sha256 /td sha256 ${{ github.workspace }}/BinaryCache/devtools/devtools.msi
+
+      - name: Build Installer
+        run: |
+          mkdir ${{ github.workspace }}/BuildRoot
+          cp ${{ github.workspace }}/BinaryCache/toolchain/toolchain.msi ${{ github.workspace }}/BuildRoot/toolchain.msi
+          cp ${{ github.workspace }}/BinaryCache/sdk/sdk.msi ${{ github.workspace }}/BuildRoot/sdk.msi
+          cp ${{ github.workspace }}/BinaryCache/runtime/runtime.msi ${{ github.workspace }}/BuildRoot/runtime.msi
+          cp ${{ github.workspace }}/BinaryCache/devtools/devtools.msi ${{ github.workspace }}/BuildRoot/devtools.msi
+          msbuild -nologo `
+            -p:Configuration=Release `
+            -p:RunWixToolsOutOfProc=true `
+            -p:OutputPath=${{ github.workspace }}\BinaryCache\installer\ `
+            -p:IntermediateOutputPath=${{ github.workspace }}\BinaryCache\installer\ `
+            -p:MSI_LOCATION=${{ github.workspace }}\BuildRoot `
+            ${{ github.workspace }}/SourceCache/swift-installer-scripts/platforms/windows/installer.wixproj
+          # codesign /f $(CERTIFICATE) /p $(PASSPHRASE) /tr http://timestamp.digicert.com /fd sha256 /td sha256 ${{ github.workspace }}/BinaryCache/installer/installer.exe
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: toolchain-${{ matrix.arch }}-msi
+          path: ${{ github.workspace }}/BinaryCache/toolchain/toolchain.msi
       - uses: actions/upload-artifact@v2
         with:
           name: sdk-windows-${{ matrix.arch }}-msi
@@ -105,3 +161,11 @@ jobs:
         with:
           name: runtime-windows-${{ matrix.arch }}-msi
           path: ${{ github.workspace }}/BinaryCache/runtime/runtime.msi
+      - uses: actions/upload-artifact@v2
+        with:
+          name: devtools-${{ matrix.arch }}-msi
+          path: ${{ github.workspace }}/BinaryCache/devtools/devtools.msi
+      - uses: actions/upload-artifact@v2
+        with:
+          name: installer-${{ matrix.arch }}
+          path: ${{ github.workspace }}/BinaryCache/installer/installer.exe
