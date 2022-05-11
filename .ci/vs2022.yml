@@ -1427,10 +1427,9 @@ stages:
             'x64':
               arch: amd64
               platform: x64
-            # TODO(compnerd) enable AArch64 toolchain
-            # 'arm64':
-            #  arch: arm64
-            #  platform: aarch64
+            'arm64':
+              arch: arm64
+              platform: aarch64
         steps:
           - download: current
             artifact: toolchain-$(arch)
@@ -1586,10 +1585,9 @@ stages:
             'x64':
               arch: amd64
               platform: x64
-            # TODO(compnerd) enable AArch64 toolchain
-            # 'arm64':
-            #  arch: arm64
-            #  platform: aarch64
+            'arm64':
+              arch: arm64
+              platform: aarch64
         steps:
           - download: current
             artifact: devtools-$(arch)
