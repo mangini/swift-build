@@ -1431,6 +1431,13 @@ stages:
               arch: arm64
               platform: aarch64
         steps:
+          - task: PowerShell@2
+            inputs:
+              targetType: 'inline'
+              script: |
+                curl.exe -o "${env:Temp}\wix314.exe" -sL https://wixtoolset.org/downloads/v3.14.0.5722/wix314.exe
+                Start-Process -Wait -PassThru -FilePath "${env:Temp}\wix314.exe" -ArgumentList ("/q")
+              condition: eq(variables['arch'], 'arm64')
           - download: current
             artifact: toolchain-$(arch)
           - download: current
@@ -1589,6 +1596,13 @@ stages:
               arch: arm64
               platform: aarch64
         steps:
+          - task: PowerShell@2
+            inputs:
+              targetType: 'inline'
+              script: |
+                curl.exe -o "${env:Temp}\wix314.exe" -sL https://wixtoolset.org/downloads/v3.14.0.5722/wix314.exe
+                Start-Process -Wait -PassThru -FilePath "${env:Temp}\wix314.exe" -ArgumentList ("/q")
+              condition: eq(variables['arch'], 'arm64')
           - download: current
             artifact: devtools-$(arch)
           - checkout: apple/swift-installer-scripts
